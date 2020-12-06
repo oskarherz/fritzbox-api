@@ -38,7 +38,7 @@ class Device():
     self.type = type
 
   def __repr__(self) -> str:
-    return 'Device(name={}, mac={}, ipv4={}, ipv6={})'.format(
+    return "Device(name='{}', mac='{}', ipv4='{}', ipv6='{}')".format(
       self.name,
       self.mac,
       self.ipv4,

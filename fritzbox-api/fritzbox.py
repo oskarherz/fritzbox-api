@@ -1,3 +1,4 @@
+from fritzbox.streaming_rate import StreamingRate
 from typing import List
 from enum import Enum
 
@@ -15,6 +16,7 @@ class Page(str, Enum):
   LOGIN_PAGE = 'login_sid.lua'
   LOGOUT_PAGE = 'index.lua'
   DEVICES_PAGE = 'data.lua'
+  ONLINE_MONITOR_PAGE = 'internet/inetstat_monitor.lua'
 
 class fritzbox():
 
@@ -29,9 +31,16 @@ class fritzbox():
   def __enter__(self):
     return self.login(self.password)
 
-  def _exit__(self, type, value, traceback):
+  def __exit__(self, type, value, traceback):
     if type is not None:
       self.logout()
+
+  def __repr__(self) -> str:
+    return "fritzbox(url='{}', sid='{}', password='*****{}')".format(
+      self.url,
+      self.sid,
+      self.password[-3:]
+    )
 
 
   def page(self, page: str):
@@ -47,13 +56,29 @@ class fritzbox():
       data = { 'response': login_hash, 'username': '' }
     )
 
-    sid = utils.get_field_from_xml(xml = login_res.content, field = 'sid')
+    sid = utils.get_field_from_xml(xml = login_res.content, field = 'SID')
 
     if sid == '0000000000000000': 
       raise LoginFailedException(login_res)
 
     self.sid = sid
     return self
+
+  def get_streaming_rate(self) -> StreamingRate:
+    payload = {
+      'sid': self.sid,
+      'myXhr': 1,
+      'action': 'get_graphic',
+      'useajax': 1,
+      'xhr': 1
+    }
+
+    res = requests.get(
+      url = self.page(Page.ONLINE_MONITOR_PAGE),
+      params = payload
+    )
+
+    return StreamingRate(from_dict = res.json()[0])
 
 
   def get_devices(self, active = True, passive = True) -> List[Device]:
